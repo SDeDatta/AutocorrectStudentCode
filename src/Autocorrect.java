@@ -1,6 +1,8 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
 
 /**
  * Autocorrect
@@ -8,17 +10,21 @@ import java.io.IOException;
  * A command-line tool to suggest similar words when given one not in the dictionary.
  * </p>
  * @author Zach Blick
- * @author YOUR NAME HERE
+ * @author Surya De Datta
  */
-public class Autocorrect {
-
+public class Autocorrect
+{
+    private String[] words;
+    private int threshold;
     /**
      * Constucts an instance of the Autocorrect class.
      * @param words The dictionary of acceptable words.
      * @param threshold The maximum number of edits a suggestion can have.
      */
-    public Autocorrect(String[] words, int threshold) {
-
+    public Autocorrect(String[] words, int threshold)
+    {
+        this.words = words;
+        this.threshold = threshold;
     }
 
     /**
@@ -27,9 +33,83 @@ public class Autocorrect {
      * @return An array of all dictionary words with an edit distance less than or equal
      * to threshold, sorted by edit distnace, then sorted alphabetically.
      */
-    public String[] runTest(String typed) {
+    public String[] runTest(String typed)
+    {
+        int gramLen = 2;
+        if(typed.length() >= 9)
+        {
+            gramLen = 3;
+        }
 
-        return new String[0];
+        ArrayList<String> typedGram = nGram(typed, gramLen);
+        ArrayList<Pair> matches = new ArrayList<>();
+        int overlap = 0;
+        for(String word : words)
+        {
+            ArrayList<String> biGrams = nGram(word, gramLen);
+            overlap = 0;
+            if(Math.abs(word.length() - typed.length()) <= threshold)
+            {
+                for(String gram: biGrams)
+                {
+                    if(typedGram.contains(gram))
+                    {
+                        overlap++;
+                    }
+                }
+                if(overlap >= 1 || typed.charAt(0) == word.charAt(0))
+                {
+                    int distance = editDistance(word, typed);
+                    if(distance <= threshold)
+                    {
+                        matches.add(new Pair(word, distance));
+                    }
+                }
+            }
+        }
+        matches.sort(Comparator.comparingInt(Pair::getEditDistance).thenComparing(Pair::getWord));
+        String[] result = new String[matches.size()];
+        for (int i = 0; i < result.length; i++)
+        {
+            result[i] = matches.get(i).getWord();
+        }
+        return result;
+    }
+    private ArrayList<String> nGram(String word, int nGram)
+    {
+        ArrayList<String> biGrams = new ArrayList<>();
+        for(int i = 0; i < word.length() - (nGram - 1); i++)
+        {
+            biGrams.add(word.substring(i, i+nGram));
+        }
+        return biGrams;
+    }
+    private int editDistance(String a, String b)
+    {
+        int arr[][] = new int[a.length() + 1][b.length() + 1];
+        for(int i = 0; i < arr[0].length; i++)
+        {
+            arr[0][i] = i;
+        }
+        for(int j = 0; j < arr.length ; j++)
+        {
+            arr[j][0] = j;
+        }
+        for(int i = 1; i < arr.length; i++)
+        {
+            for(int j = 1; j < arr[0].length; j++)
+            {
+                if(a.charAt(i - 1) == b.charAt(j - 1))
+                {
+                    arr[i][j] = arr[i-1][j-1];
+                }
+                else
+                {
+                   arr[i][j] = 1 + Math.min(arr[i-1][j-1], Math.min(arr[i][j-1], arr[i-1][j]));
+                }
+            }
+        }
+        return arr[a.length()][b.length()];
     }
 
 
