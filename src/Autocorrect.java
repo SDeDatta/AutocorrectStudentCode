@@ -3,6 +3,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Scanner;
 
 /**
  * Autocorrect
@@ -16,6 +17,12 @@ public class Autocorrect
 {
     private String[] words;
     private int threshold;
+
+    private ArrayList<String>[] biGrams;
+    private ArrayList<String>[] triGrams;
+    private int[] lengths;
+    private char[] firstChars;
+
     /**
      * Constucts an instance of the Autocorrect class.
      * @param words The dictionary of acceptable words.
@@ -25,14 +32,46 @@ public class Autocorrect
     {
         this.words = words;
         this.threshold = threshold;
-    }
+        biGrams = new ArrayList[words.length];
+        triGrams = new ArrayList[words.length];
+        lengths = new int[words.length];
+        firstChars = new char[words.length];
 
+        for(int i = 0; i < words.length; i++)
+        {
+            String str = words[i];
+            lengths[i] = str.length();
+            firstChars[i] = str.charAt(0);
+            biGrams[i] = nGram(str, 2);
+            triGrams[i] = nGram(str, 3);
+        }
+
+    }
+    public static void main(String[] args)
+    {
+        Scanner scanner = new Scanner(System.in);
+        String[] dict = loadDictionary("large");
+        int threshold = 2;
+        Autocorrect autocorrect = new Autocorrect(dict, threshold);
+        while(true)
+        {
+            System.out.println("Write a word: ");
+            String typed = scanner.nextLine();
+            String[] results = autocorrect.runTest(typed);
+            for(String word : results)
+            {
+                System.out.println(word);
+            }
+        }
+
+    }
     /**
      * Runs a test from the tester file, AutocorrectTester.
      * @param typed The (potentially) misspelled word, provided by the user.
      * @return An array of all dictionary words with an edit distance less than or equal
      * to threshold, sorted by edit distnace, then sorted alphabetically.
      */
+
     public String[] runTest(String typed)
     {
         int gramLen = 2;
@@ -44,25 +83,32 @@ public class Autocorrect
         ArrayList<String> typedGram = nGram(typed, gramLen);
         ArrayList<Pair> matches = new ArrayList<>();
         int overlap = 0;
-        for(String word : words)
+        for(int i = 0; i < words.length; i++)
         {
-            ArrayList<String> biGrams = nGram(word, gramLen);
-            overlap = 0;
-            if(Math.abs(word.length() - typed.length()) <= threshold)
+            ArrayList<String> grams = new ArrayList<>();
+            if(gramLen == 2)
             {
-                for(String gram: biGrams)
+                grams = biGrams[i];
+            }
+            else
+            {
+                grams = triGrams[i];
+            }
+            if(Math.abs(lengths[i] - typed.length()) <= threshold)
+            {
+                for(String gram: grams)
                 {
                     if(typedGram.contains(gram))
                     {
                         overlap++;
                     }
                 }
-                if(overlap >= 1 || typed.charAt(0) == word.charAt(0))
+                if(overlap >= 1 || typed.charAt(0) == firstChars[i])
                 {
-                    int distance = editDistance(word, typed);
+                    int distance = editDistance(words[i], typed);
                     if(distance <= threshold)
                     {
-                        matches.add(new Pair(word, distance));
+                        matches.add(new Pair(words[i], distance));
                     }
                 }
             }
